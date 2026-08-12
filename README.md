@@ -60,6 +60,22 @@ environment variables; the public ones are committed in `.env`.
 | `import.meta.env.VITE_*`           | `process.env.NEXT_PUBLIC_*`                         |
 | `index.html`                       | `src/app/layout.tsx`                                |
 
+## Content freshness
+
+Every route that reads the database carries `export const revalidate = 300`.
+Edits made in the admin panel or directly in Supabase appear on the live site
+within five minutes — **no redeploy needed**. Routes with no database access
+(`/about/leadership`, `/about/legacy`, `/resources`) stay fully static.
+
+A redeploy is still required for code, layout, or committed-asset changes.
+
+To verify a build without disturbing a running `next dev`, use a separate
+output directory:
+
+    NEXT_DIST_DIR=.next-verify npm run build
+
+`next.config.mjs` honours that variable; `.next-*` is gitignored.
+
 ## Rendering model
 
 Route segments are **server components**. Each one fetches through

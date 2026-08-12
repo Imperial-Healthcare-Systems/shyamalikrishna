@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 import { getProduct, getProducts, getSiteSettings } from '@/lib/data';
 import { ProductDetailPage } from '@/views/public/ProductDetailPage';
 
+// Re-render at most every 5 minutes so catalogue edits (new product
+// images, copy changes) reach the live site without a redeploy.
+export const revalidate = 300;
+
 export async function generateMetadata({ params }: { params: Promise<{ productSlug: string; categorySlug: string }> }): Promise<Metadata> {
   const { productSlug, categorySlug } = await params;
   const product = await getProduct(productSlug);

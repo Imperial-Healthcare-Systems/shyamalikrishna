@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import { getSiteSettings } from '@/lib/data';
 import { ContactPage } from '@/views/public/ContactPage';
 
+// Re-render at most every 5 minutes so catalogue edits (new product
+// images, copy changes) reach the live site without a redeploy.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: { absolute: `Contact Us — Shyamali Krishna Automobile` },
   description: `Contact Shyamali Krishna Automobile in Nawada, Bihar. Phone: +91 7488095803. Email: info@shyamalikrishna.com. Authorized agricultural machinery dealer for Bihar.`,
