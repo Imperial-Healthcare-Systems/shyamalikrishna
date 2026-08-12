@@ -24,6 +24,25 @@ The last two are blank in the committed `.env.local` and must be filled in
 before the admin panel works. `/api/admin/login` returns 503 if
 `ADMIN_PASSWORD` is unset — it never falls back to a baked-in password.
 
+## Deploying (Vercel)
+
+`vercel.json` declares `framework: "nextjs"`. Check these in the dashboard:
+
+| Setting          | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Root Directory   | `shyamali-next` (if the repo root is the parent folder)    |
+| Framework Preset | Next.js                                                    |
+| Build Command    | default (`npm run build`)                                  |
+| Output Directory | **default / empty — not `dist`**                           |
+
+`dist` is the Vite app's output. This app emits `.next`, which Vercel handles
+natively. An explicit `dist` override left over from the old project causes
+*"No Output Directory named `dist` found"* — `vercel.json` cannot unset an
+explicit dashboard override, so clear it there.
+
+Only `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_PASSWORD` need to be added as
+environment variables; the public ones are committed in `.env`.
+
 ## What changed from the Vite build
 
 | Vite / React Router                | Next.js                                            |
