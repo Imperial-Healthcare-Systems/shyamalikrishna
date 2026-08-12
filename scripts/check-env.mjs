@@ -12,7 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 // Hosts like Vercel inject variables straight into the process environment,
 // but a local `npm run build` gets them from .env files that Next reads
 // itself — this script runs under plain node, so load them here too.
-for (const file of ['.env.local', '.env']) {
+for (const file of ['.env.local', '.env.production', '.env']) {
   if (!existsSync(file)) continue;
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
