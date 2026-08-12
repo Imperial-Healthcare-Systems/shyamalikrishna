@@ -64,7 +64,7 @@ export function PortfolioPage({ initialCategories, initialPartners, initialProdu
           'खेत यांत्रिकीकरण के छह चरण, एक मल्टी-OEM पोर्टफोलियो। श्रेणी के अनुसार ब्राउज़ करें या ब्रांड के अनुसार देखें।'
         )}
         breadcrumb={<Breadcrumbs items={[{ label: 'Portfolio', href: '/portfolio' }]} />}
-        image="/portfolio-overview.webp"
+        image="/category-sowing.webp"
         imageAlt="Agricultural implements across the six stages of farm mechanization"
       />
 

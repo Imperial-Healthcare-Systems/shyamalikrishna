@@ -129,7 +129,7 @@ export function HomePage({ initialCategories, initialPartners, initialProducts, 
       <section className="relative bg-charcoal overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/homepage-hero.webp"
+            src="/category-harvesting-residue.webp"
             alt="Tractor with mounted implement working in a Bihar field at golden hour"
             className="w-full h-full object-cover opacity-50"
             fetchPriority="high"
