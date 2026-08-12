@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://www.shyamalikrishna.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.shyamalikrishna.com/" />
+    <xhtml:link rel="alternate" hreflang="hi" href="https://www.shyamalikrishna.com/" />
+  </url>
+  <url><loc>https://www.shyamalikrishna.com/about</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/about/leadership</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/about/legacy</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/tillage-soil-preparation</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/sowing-seeding</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/residue-management</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/harvesting</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/post-harvest</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/portfolio/specialist-implements</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/maschio-gaspardo</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/sitara-agrotech</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/govind</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/agrimax</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/hazarix</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/partners/harvester-oems</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services/sales-consultation</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services/after-sales-service</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services/spare-parts</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services/finance-emi</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/services/subsidy-assistance</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/resources</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/resources/machinery-guides</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/resources/subsidy-schemes</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/resources/faqs</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/contact</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/enquire</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/careers</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/terms-of-use</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/refund-cancellation</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.shyamalikrishna.com/sitemap</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+</urlset>
