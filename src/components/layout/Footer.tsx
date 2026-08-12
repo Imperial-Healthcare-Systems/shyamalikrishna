@@ -20,14 +20,15 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gold flex items-center justify-center">
-                <span className="heading-serif text-charcoal text-lg font-bold">SK</span>
-              </div>
-              <div>
-                <div className="heading-serif text-ivory text-base leading-tight">Shyamali Krishna</div>
-                <div className="text-[10px] text-ivory/50 tracking-[0.1em] uppercase">Automobile Pvt. Ltd.</div>
-              </div>
+            <div className="mb-4">
+              <img
+                src="/logo.svg"
+                alt="Shyamali Krishna Automobile"
+                className="h-12 w-auto"
+                width={1117}
+                height={456}
+                loading="lazy"
+              />
             </div>
             <p className="text-sm text-ivory/60 leading-relaxed">
               Authorized dealer and distributor of premium agricultural machinery across Bihar and adjoining regions.

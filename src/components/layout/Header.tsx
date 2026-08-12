@@ -107,14 +107,15 @@ export function Header() {
           <div className="container-site">
             <div className="flex items-center justify-between h-16 lg:h-20">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-3 shrink-0" aria-label="Shyamali Krishna Automobile — Home">
-                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-charcoal flex items-center justify-center">
-                  <span className="heading-serif text-gold text-xl lg:text-2xl font-bold">SK</span>
-                </div>
-                <div className="hidden sm:block">
-                  <div className="heading-serif text-base lg:text-lg text-charcoal leading-tight">Shyamali Krishna</div>
-                  <div className="text-[10px] lg:text-xs text-stone tracking-[0.1em] uppercase">Automobile Pvt. Ltd.</div>
-                </div>
+              <Link href="/" className="flex items-center shrink-0" aria-label="Shyamali Krishna Automobile — Home">
+                <img
+                  src="/logo.svg"
+                  alt="Shyamali Krishna Automobile"
+                  className="h-9 lg:h-12 w-auto"
+                  width={1117}
+                  height={456}
+                  fetchPriority="high"
+                />
               </Link>
 
               {/* Desktop nav */}
