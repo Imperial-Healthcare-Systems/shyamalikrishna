@@ -9,12 +9,16 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "prebuild": "node scripts/check-env.mjs",
-    "check-env": "node scripts/check-env.mjs"
+    "check-env": "node scripts/check-env.mjs",
+    "check-admin": "node scripts/check-admin.mjs",
+    "export-data": "node scripts/export-data.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "@types/nodemailer": "^8.0.1",
     "lucide-react": "^0.446.0",
     "next": "^15.1.6",
+    "nodemailer": "^9.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

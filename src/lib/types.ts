@@ -122,12 +122,54 @@ export interface Faq {
   display_order: number;
 }
 
+/** Dynamic lookup managed from /admin/job-categories. */
+export interface JobCategory {
+  id: string;
+  name: string;
+  name_hi: string | null;
+  slug: string;
+  description: string | null;
+  active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  /** Only present on admin listings, which count usage before allowing a delete. */
+  job_count?: number;
+}
+
+/** Dynamic lookup managed from /admin/job-locations. */
+export interface JobLocation {
+  id: string;
+  name: string;
+  name_hi: string | null;
+  slug: string;
+  active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  job_count?: number;
+}
+
+/** Dynamic lookup managed from /admin/job-locations (second tab). */
+export interface EmploymentType {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  job_count?: number;
+}
+
 export interface Job {
   id: string;
   title: string;
   title_hi: string | null;
   slug: string;
+  /** Denormalised snapshot of the category name — survives category deletion. */
   department: string | null;
+  /** Denormalised, comma-joined snapshot of the mapped location names. */
   location: string | null;
   employment_type: string | null;
   experience: string | null;
@@ -148,6 +190,27 @@ export interface Job {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+
+  // Recruitment fields
+  category_id: string | null;
+  vacancies: number;
+  experience_level: string | null;
+  min_experience: string | null;
+  max_experience: string | null;
+  description: string | null;
+  description_hi: string | null;
+  skills: string | null;
+  salary_type: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_period: string | null;
+  salary_negotiable: boolean;
+  contact_info: string | null;
+  additional_notes: string | null;
+
+  // Populated by the join in lib/data.ts and lib/hooks.ts
+  category?: JobCategory | null;
+  locations?: JobLocation[];
 }
 
 export interface Lead {
@@ -205,6 +268,18 @@ export interface JobApplication {
   is_general: boolean;
   created_at: string;
   updated_at: string;
+
+  /** Frozen at submission time so the record reads correctly even if the
+   *  job is later renamed, recategorised, or deleted. */
+  job_title_snapshot: string | null;
+  category_snapshot: string | null;
+  preferred_location: string | null;
+  address: string | null;
+
+  notification_status: string;
+  notification_attempts: number;
+  notification_last_attempt_at: string | null;
+  notification_error: string | null;
 }
 
 export interface AdminActivity {
@@ -252,10 +327,10 @@ export const LEAD_PRIORITIES = {
 
 export const APPLICATION_STATUSES = {
   new: 'New',
-  under_review: 'Under Review',
+  under_review: 'Reviewed',
   shortlisted: 'Shortlisted',
   interview: 'Interview',
-  selected: 'Selected',
+  selected: 'Hired',
   rejected: 'Rejected',
   withdrawn: 'Withdrawn',
 } as const;
@@ -263,8 +338,83 @@ export const APPLICATION_STATUSES = {
 export const JOB_STATUSES = {
   draft: 'Draft',
   published: 'Published',
-  archived: 'Archived',
+  closed: 'Closed',
 } as const;
+
+export const NOTIFICATION_STATUSES = {
+  pending: 'Pending',
+  sent: 'Sent',
+  failed: 'Failed',
+  skipped: 'Not configured',
+} as const;
+
+/** Presets offered in the job editor. The admin can also type a custom value. */
+export const EXPERIENCE_LEVELS = [
+  'Fresher',
+  '0–1 Years',
+  '1–3 Years',
+  '3–5 Years',
+  '5+ Years',
+] as const;
+
+export const SALARY_TYPES = {
+  fixed: 'Fixed',
+  range: 'Range',
+  negotiable: 'Negotiable',
+} as const;
+
+export const SALARY_PERIODS = {
+  month: 'per month',
+  year: 'per year',
+  day: 'per day',
+  week: 'per week',
+} as const;
+
+/**
+ * The business runs on IST. Deadlines are stored as plain dates, so "has the
+ * deadline passed" has to be answered in the company's own timezone rather
+ * than the server's — otherwise a Vercel box running UTC closes applications
+ * five and a half hours early.
+ */
+export const COMPANY_TIMEZONE = 'Asia/Kolkata';
+
+/** Today's date in the company timezone, as YYYY-MM-DD. */
+export function companyToday(now: Date = new Date()): string {
+  // en-CA formats as YYYY-MM-DD, which sorts and compares lexicographically.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: COMPANY_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+/**
+ * A deadline is inclusive: applications are accepted through the end of the
+ * deadline day, IST. Returns false when no deadline is set.
+ */
+export function isDeadlinePassed(deadline: string | null | undefined, now: Date = new Date()): boolean {
+  if (!deadline) return false;
+  const day = String(deadline).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  return day < companyToday(now);
+}
+
+/** A job accepts applications only while published and inside its deadline. */
+export function isJobOpen(job: Pick<Job, 'status' | 'application_deadline'> | null | undefined, now: Date = new Date()): boolean {
+  if (!job) return false;
+  if (job.status !== 'published') return false;
+  return !isDeadlinePassed(job.application_deadline, now);
+}
+
+/** Splits a textarea-backed list field into trimmed, non-empty lines. */
+export function toList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return String(value)
+    .split('\n')
+    .map((line) => line.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
 
 // Re-export utility functions for convenience
 export { formatDate, formatDateTime, timeAgo, slugify } from '@/lib/utils';

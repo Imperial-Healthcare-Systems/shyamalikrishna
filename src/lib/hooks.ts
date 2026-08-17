@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category, Partner, Product, Service, Resource, Faq, Job, SiteSettings } from '@/lib/types';
+import { JOB_SELECT, normalizeJob, normalizeJobs } from '@/lib/careers';
+import type {
+  Category, Partner, Product, Service, Resource, Faq, Job, JobCategory, JobLocation, SiteSettings,
+} from '@/lib/types';
 import { getSettings } from '@/lib/settings';
 
 // Generic hook for async data.
@@ -204,25 +207,24 @@ export function useFaqs(initial?: Faq[]) {
   }, [], initial);
 }
 
-export function useJobs(filters?: { search?: string; department?: string; employmentType?: string; location?: string }, initial?: Job[]) {
+/**
+ * Every published job, once.
+ *
+ * Filtering is done in the view rather than by refetching per keystroke: the
+ * whole list is a handful of rows for a single dealership, so a round trip per
+ * character would add latency and a loading flicker to buy nothing. It also
+ * means "Clear Filters" is instant and the counts stay consistent.
+ */
+export function useJobs(initial?: Job[]) {
   return useAsync<Job[]>(async () => {
-    let query = supabase
+    const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select(JOB_SELECT)
       .eq('status', 'published')
       .order('published_at', { ascending: false });
-
-    if (filters?.search) {
-      query = query.or(`title.ilike.%${filters.search}%,department.ilike.%${filters.search}%,summary.ilike.%${filters.search}%`);
-    }
-    if (filters?.department && filters.department !== 'all') query = query.eq('department', filters.department);
-    if (filters?.employmentType && filters.employmentType !== 'all') query = query.eq('employment_type', filters.employmentType);
-    if (filters?.location && filters.location !== 'all') query = query.eq('location', filters.location);
-
-    const { data, error } = await query;
     if (error) throw error;
-    return data || [];
-  }, [filters?.search, filters?.department, filters?.employmentType, filters?.location], initial);
+    return normalizeJobs(data as Array<Record<string, unknown>> | null);
+  }, [], initial);
 }
 
 export function useJob(slug: string | undefined, initial?: Job | null) {
@@ -230,13 +232,37 @@ export function useJob(slug: string | undefined, initial?: Job | null) {
     if (!slug) return null;
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select(JOB_SELECT)
       .eq('slug', slug)
-      .eq('status', 'published')
+      .in('status', ['published', 'closed'])
       .maybeSingle();
     if (error) throw error;
-    return data;
+    return normalizeJob(data as Record<string, unknown> | null);
   }, [slug], initial);
+}
+
+export function useJobCategories(initial?: JobCategory[]) {
+  return useAsync<JobCategory[]>(async () => {
+    const { data, error } = await supabase
+      .from('job_categories')
+      .select('*')
+      .eq('active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }, [], initial);
+}
+
+export function useJobLocations(initial?: JobLocation[]) {
+  return useAsync<JobLocation[]>(async () => {
+    const { data, error } = await supabase
+      .from('job_locations')
+      .select('*')
+      .eq('active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }, [], initial);
 }
 
 export function useSiteSettings(initial?: SiteSettings) {

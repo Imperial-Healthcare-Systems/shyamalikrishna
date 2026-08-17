@@ -31,7 +31,26 @@ const missingRuntime = REQUIRED_AT_RUNTIME.filter((k) => !process.env[k]);
 if (missingRuntime.length) {
   console.warn(
     `\n⚠  ${missingRuntime.join(', ')} not set — the site will build and all public\n` +
-      `   pages will work, but /admin will return a configuration error.\n`
+      `   pages will work, but /admin and career applications will return a\n` +
+      `   configuration error.\n`
+  );
+}
+
+// Email is optional by design: an application is saved and its CV stored before
+// any mail is attempted, so an unconfigured mailbox degrades to "notify later"
+// rather than losing anything. Worth saying out loud at build time, though —
+// silently not emailing recruitment alerts is the kind of thing nobody notices
+// until a candidate follows up.
+const hasSmtp = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD;
+const hasResend = Boolean(process.env.RESEND_API_KEY);
+
+if (!hasSmtp && !hasResend) {
+  console.warn(
+    `\n⚠  No mail transport configured (SMTP_HOST/SMTP_USER/SMTP_PASSWORD or\n` +
+      `   RESEND_API_KEY). Career applications will still be saved and CVs stored,\n` +
+      `   but no notification email will be sent and admin password recovery will\n` +
+      `   be unavailable. Applications can be notified later from\n` +
+      `   Admin → Applications → Resend notification.\n`
   );
 }
 

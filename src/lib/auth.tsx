@@ -8,7 +8,7 @@ const TOKEN_EXPIRY_KEY = 'ska-admin-expiry';
 interface AdminAuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
-  login: (password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (password: string) => Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }>;
   logout: () => void;
   loading: boolean;
 }
@@ -33,35 +33,57 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = useCallback(async (password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
+  const login = useCallback(
+    async (password: string): Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }> => {
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
 
-      const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Login failed' };
+        if (!response.ok) {
+          return { success: false, error: data.error || 'Login failed' };
+        }
+
+        setToken(data.token);
+        localStorage.setItem(TOKEN_KEY, data.token);
+        const expiry = new Date(Date.now() + data.expires_in * 1000);
+        localStorage.setItem(TOKEN_EXPIRY_KEY, expiry.toISOString());
+        return { success: true, mustChangePassword: Boolean(data.must_change_password) };
+      } catch {
+        return { success: false, error: 'Network error. Please try again.' };
       }
+    },
+    []
+  );
 
-      setToken(data.token);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      const expiry = new Date(Date.now() + data.expires_in * 1000);
-      localStorage.setItem(TOKEN_EXPIRY_KEY, expiry.toISOString());
-      return { success: true };
-    } catch {
-      return { success: false, error: 'Network error. Please try again.' };
-    }
-  }, []);
-
+  /**
+   * Clears local state immediately, then tells the server to drop the session
+   * row.
+   *
+   * Order matters: the UI must lock even if the network call fails, and the
+   * server call must still happen — clearing localStorage alone would leave a
+   * token that keeps working for the rest of its 12-hour life if it had already
+   * been copied out of the browser.
+   */
   const logout = useCallback(() => {
+    const current = token || localStorage.getItem(TOKEN_KEY);
     setToken(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
-  }, []);
+
+    if (current) {
+      void fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${current}` },
+        body: '{}',
+        keepalive: true,
+      }).catch(() => undefined);
+    }
+  }, [token]);
 
   // Check token expiry periodically
   useEffect(() => {

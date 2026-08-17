@@ -28,7 +28,7 @@ export function SitemapPage({ initialCategories, initialJobs, initialPartners, i
   const { data: partners } = usePartners(initialPartners);
   const { data: products } = useProducts(undefined, initialProducts);
   const { data: services } = useServices(initialServices);
-  const { data: jobs } = useJobs(undefined, initialJobs);
+  const { data: jobs } = useJobs(initialJobs);
   const { data: resources } = useResources(undefined, initialResources);
 
   const loading = !categories && !partners;

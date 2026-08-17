@@ -1,6 +1,9 @@
 import { cache } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category, Partner, Product, Service, Resource, Faq, Job, SiteSettings } from '@/lib/types';
+import { JOB_SELECT, normalizeJob, normalizeJobs } from '@/lib/careers';
+import type {
+  Category, Partner, Product, Service, Resource, Faq, Job, JobCategory, JobLocation, SiteSettings,
+} from '@/lib/types';
 
 /**
  * Server-side counterparts to the hooks in `lib/hooks.ts`.
@@ -115,20 +118,47 @@ export const getFaqs = cache(async (): Promise<Faq[]> => {
 export const getJobs = cache(async (): Promise<Job[]> => {
   const { data } = await supabase
     .from('jobs')
-    .select('*')
+    .select(JOB_SELECT)
     .eq('status', 'published')
     .order('published_at', { ascending: false });
-  return data || [];
+  return normalizeJobs(data as Array<Record<string, unknown>> | null);
 });
 
+/**
+ * Published *and* closed, deliberately.
+ *
+ * A closed vacancy's URL is already out there — in an email, a WhatsApp
+ * forward, someone's bookmarks. Answering 404 there is worse than answering
+ * "this position is no longer accepting applications", so the page renders and
+ * the apply form is what disappears. Drafts are excluded: those have never
+ * been public and must not become public by URL guess.
+ */
 export const getJob = cache(async (slug: string): Promise<Job | null> => {
   const { data } = await supabase
     .from('jobs')
-    .select('*')
+    .select(JOB_SELECT)
     .eq('slug', slug)
-    .eq('status', 'published')
+    .in('status', ['published', 'closed'])
     .maybeSingle();
-  return data;
+  return normalizeJob(data as Record<string, unknown> | null);
+});
+
+export const getJobCategories = cache(async (): Promise<JobCategory[]> => {
+  const { data } = await supabase
+    .from('job_categories')
+    .select('*')
+    .eq('active', true)
+    .order('display_order', { ascending: true });
+  return data || [];
+});
+
+export const getJobLocations = cache(async (): Promise<JobLocation[]> => {
+  const { data } = await supabase
+    .from('job_locations')
+    .select('*')
+    .eq('active', true)
+    .order('display_order', { ascending: true });
+  return data || [];
 });
 
 export const getSiteSettings = cache(async (): Promise<SiteSettings> => {

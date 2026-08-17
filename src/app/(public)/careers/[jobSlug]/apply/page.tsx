@@ -1,12 +1,25 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getJob } from '@/lib/data';
 import { JobApplyPage } from '@/views/public/JobApplyPage';
 
-// Re-render at most every 5 minutes so catalogue edits (new product
-// images, copy changes) reach the live site without a redeploy.
 export const revalidate = 300;
+
+// An application form has nothing to offer a search engine, and indexing it
+// competes with the job page it belongs to.
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 export default async function Page({ params }: { params: Promise<{ jobSlug: string }> }) {
   const { jobSlug } = await params;
-  const job = jobSlug === 'general-application' ? null : await getJob(jobSlug);
+
+  if (jobSlug === 'general-application') {
+    return <JobApplyPage initialJob={null} />;
+  }
+
+  const job = await getJob(jobSlug);
+  if (!job) notFound();
+
   return <JobApplyPage initialJob={job} />;
 }

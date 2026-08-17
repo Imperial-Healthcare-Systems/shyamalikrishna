@@ -6,24 +6,54 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, Phone, Package, Tag, Building2,
   Wrench, FileText, Briefcase, Settings, LogOut, Menu, X,
-  Bell, Search,
+  Layers, MapPin, UserCheck,
 } from 'lucide-react';
 import { useAdminAuth } from '@/lib/auth';
 
-const navItems = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { label: 'Leads', href: '/admin/leads', icon: Users },
-  { label: 'RFQs', href: '/admin/leads?lead_type=product_enquiry', icon: Tag },
-  { label: 'Callback Requests', href: '/admin/leads?lead_type=callback', icon: Phone },
-  { label: 'Products', href: '/admin/products', icon: Package },
-  { label: 'Categories', href: '/admin/categories', icon: Tag },
-  { label: 'OEM Partners', href: '/admin/partners', icon: Building2 },
-  { label: 'Services', href: '/admin/services', icon: Wrench },
-  { label: 'Resources', href: '/admin/resources', icon: FileText },
-  { label: 'Careers', href: '/admin/jobs', icon: Briefcase },
-  { label: 'Applications', href: '/admin/applications', icon: Users },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
+/**
+ * Grouped so the recruitment screens read as one section rather than being
+ * scattered through the CMS entries — the admin who opens this portal to check
+ * applications should not have to hunt for them.
+ */
+const navGroups: Array<{ label: string | null; items: Array<{ label: string; href: string; icon: typeof Users }> }> = [
+  {
+    label: null,
+    items: [{ label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    label: 'Recruitment',
+    items: [
+      { label: 'Jobs', href: '/admin/jobs', icon: Briefcase },
+      { label: 'Applications', href: '/admin/applications', icon: UserCheck },
+      { label: 'Job Categories', href: '/admin/job-categories', icon: Layers },
+      { label: 'Locations', href: '/admin/job-locations', icon: MapPin },
+    ],
+  },
+  {
+    label: 'Enquiries',
+    items: [
+      { label: 'Leads', href: '/admin/leads', icon: Users },
+      { label: 'RFQs', href: '/admin/leads?lead_type=product_enquiry', icon: Tag },
+      { label: 'Callback Requests', href: '/admin/leads?lead_type=callback', icon: Phone },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      { label: 'Products', href: '/admin/products', icon: Package },
+      { label: 'Product Categories', href: '/admin/categories', icon: Tag },
+      { label: 'OEM Partners', href: '/admin/partners', icon: Building2 },
+      { label: 'Services', href: '/admin/services', icon: Wrench },
+      { label: 'Resources', href: '/admin/resources', icon: FileText },
+    ],
+  },
+  {
+    label: null,
+    items: [{ label: 'Settings', href: '/admin/settings', icon: Settings }],
+  },
 ];
+
+const navItems = navGroups.flatMap((group) => group.items);
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { logout } = useAdminAuth();
@@ -66,25 +96,35 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded transition-colors ${
-                  isActive(item.href)
-                    ? 'bg-gold text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]" aria-label="Admin navigation">
+          {navGroups.map((group, groupIndex) => (
+            <div key={groupIndex} className={group.label ? 'pt-3' : undefined}>
+              {group.label && (
+                <p className="px-3 pb-1.5 text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-500">
+                  {group.label}
+                </p>
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-gold text-white'
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    }`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-800">
@@ -128,10 +168,16 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-gray-100 rounded relative" aria-label="Notifications">
-                <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full" />
-              </button>
+              {/* Replaces a bell icon that had a permanent unread dot and no
+                  behaviour behind it — this goes where the admin actually
+                  wants to land. */}
+              <Link
+                href="/admin/applications?status=new"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+              >
+                <UserCheck className="w-4 h-4" />
+                New applications
+              </Link>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gray-900 text-gold flex items-center justify-center text-sm font-medium rounded-full">
                   A

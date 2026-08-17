@@ -2,24 +2,37 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, Mail, Phone, MapPin, Download, Trash2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft, Mail, Phone, MapPin, Download, Trash2, Send, Loader2, Home, Briefcase,
+} from 'lucide-react';
 import { adminFetch } from '@/lib/supabase';
 import { useAdminAuth } from '@/lib/auth';
 import { LoadingSpinner, ErrorState } from '@/components/ui/States';
-import { APPLICATION_STATUSES, formatDate, formatDateTime } from '@/lib/types';
+import {
+  APPLICATION_STATUSES, NOTIFICATION_STATUSES, formatDate, formatDateTime,
+} from '@/lib/types';
 import type { JobApplication } from '@/lib/types';
+import {
+  AdminCard, Alert, ConfirmDialog, StatusPill,
+  INPUT, BTN_SECONDARY, BTN_DANGER_GHOST,
+} from '@/views/admin/ui';
 
 export function AdminApplicationDetail() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAdminAuth();
+  const router = useRouter();
+
   const [app, setApp] = useState<JobApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [resumeLoading, setResumeLoading] = useState(false);
-  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [cvBusy, setCvBusy] = useState(false);
+  const [mailBusy, setMailBusy] = useState(false);
+  const [notes, setNotes] = useState('');
 
   const fetchApp = useCallback(async () => {
     if (!token || !id) return;
@@ -27,8 +40,9 @@ export function AdminApplicationDetail() {
     const result = await adminFetch('/admin-api/applications/get', { token, searchParams: { id } });
     if (result.ok) {
       setApp(result.data.application);
+      setNotes(result.data.application?.internal_notes || '');
     } else {
-      setError(result.data?.error || 'Failed to load application');
+      setError(result.data?.error || 'Unable to load this application.');
     }
     setLoading(false);
   }, [token, id]);
@@ -37,194 +51,313 @@ export function AdminApplicationDetail() {
     fetchApp();
   }, [fetchApp]);
 
-  const handleUpdate = async (field: string, value: string) => {
+  const update = async (field: 'status' | 'internal_notes', value: string) => {
     if (!token || !app) return;
     setSaving(true);
+    setError(null);
     const result = await adminFetch('/admin-api/applications/update', {
       method: 'POST',
       body: { id: app.id, [field]: value },
       token,
     });
-    if (result.ok) setApp(result.data.application);
     setSaving(false);
-  };
-
-  // The applications bucket is private; ask the edge function for a
-  // short-lived signed URL at click time rather than storing a public one.
-  const handleDownloadResume = async () => {
-    if (!token || !app) return;
-    setResumeError(null);
-    setResumeLoading(true);
-    const result = await adminFetch('/admin-api/applications/resume', {
-      token,
-      searchParams: { id: app.id },
-    });
-    setResumeLoading(false);
-    if (result.ok && result.data?.url) {
-      window.open(result.data.url, '_blank', 'noopener,noreferrer');
+    if (result.ok) {
+      setApp(result.data.application);
     } else {
-      setResumeError(result.data?.error || 'Could not open resume.');
+      setError(result.data?.error || 'Could not save that change.');
     }
   };
 
-  const handleDelete = async () => {
+  /**
+   * The bucket is private. Ask the server for a short-lived signed URL at click
+   * time so the storage path is never exposed and old links stop working.
+   */
+  const downloadCv = async () => {
     if (!token || !app) return;
-    const result = await adminFetch('/admin-api/applications/delete', { method: 'DELETE', body: { id: app.id }, token });
+    setCvBusy(true);
+    setError(null);
+    const result = await adminFetch('/admin-api/applications/resume', { token, searchParams: { id: app.id } });
+    setCvBusy(false);
+    if (result.ok && result.data?.url) {
+      window.open(result.data.url, '_blank', 'noopener,noreferrer');
+    } else {
+      setError(result.data?.error || 'Could not open the CV.');
+    }
+  };
+
+  const resend = async () => {
+    if (!token || !app) return;
+    setMailBusy(true);
+    setError(null);
+    setNotice(null);
+    const result = await adminFetch('/admin-api/applications/resend', {
+      method: 'POST',
+      body: { id: app.id },
+      token,
+    });
+    setMailBusy(false);
     if (result.ok) {
-      window.history.back();
+      setNotice('Notification email sent.');
+    } else {
+      setError(result.data?.error || 'Could not send the notification.');
+    }
+    fetchApp();
+  };
+
+  const remove = async () => {
+    if (!token || !app) return;
+    setDeleteBusy(true);
+    const result = await adminFetch('/admin-api/applications/delete', {
+      method: 'DELETE',
+      body: { id: app.id },
+      token,
+    });
+    setDeleteBusy(false);
+    if (result.ok) {
+      router.push('/admin/applications');
+    } else {
+      setError(result.data?.error || 'Could not delete this application.');
+      setConfirmDelete(false);
     }
   };
 
   if (loading) return <LoadingSpinner label="Loading application…" />;
-  if (error || !app) return <ErrorState message={error || 'Application not found'} />;
+  if (!app) return <ErrorState message={error || 'Application not found.'} />;
+
+  const notificationStatus = app.notification_status || 'pending';
+  const needsResend = notificationStatus === 'failed' || notificationStatus === 'skipped';
+
+  const applicantRows: Array<{ icon?: React.ReactNode; label: string; value: React.ReactNode }> = [
+    { label: 'Full name', value: app.full_name },
+    {
+      icon: <Mail className="w-3.5 h-3.5" />,
+      label: 'Email',
+      value: <a href={`mailto:${app.email}`} className="hover:underline break-all">{app.email}</a>,
+    },
+    {
+      icon: <Phone className="w-3.5 h-3.5" />,
+      label: 'Phone',
+      value: <a href={`tel:${app.phone}`} className="hover:underline">{app.phone}</a>,
+    },
+  ];
+  if (app.preferred_location) {
+    applicantRows.push({
+      icon: <MapPin className="w-3.5 h-3.5" />,
+      label: 'Preferred location',
+      value: app.preferred_location,
+    });
+  }
+  if (app.years_of_experience) {
+    applicantRows.push({
+      icon: <Briefcase className="w-3.5 h-3.5" />,
+      label: 'Experience',
+      value: app.years_of_experience,
+    });
+  }
+  if (app.address) {
+    applicantRows.push({ icon: <Home className="w-3.5 h-3.5" />, label: 'Address', value: app.address });
+  }
+  if (app.highest_qualification) {
+    applicantRows.push({ label: 'Highest qualification', value: app.highest_qualification });
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/applications" className="p-2 hover:bg-gray-100 rounded">
+      <div className="flex items-start gap-4">
+        <Link href="/admin/applications" className="p-2 hover:bg-gray-100 rounded shrink-0 mt-1" aria-label="Back to applications">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{app.full_name}</h1>
-          <p className="text-sm text-gray-500">Applied {formatDateTime(app.created_at)}</p>
+          <p className="text-sm text-gray-500">
+            Applied for <strong>{app.job_title_snapshot || app.job_slug || 'General Application'}</strong>
+            {' · '}
+            {formatDateTime(app.created_at)}
+          </p>
         </div>
       </div>
 
+      {notice && <Alert tone="success" onDismiss={() => setNotice(null)}>{notice}</Alert>}
+      {error && <Alert tone="error" onDismiss={() => setError(null)}>{error}</Alert>}
+
+      {needsResend && (
+        <Alert tone="warning">
+          This application was saved successfully, but the notification email{' '}
+          {notificationStatus === 'skipped' ? 'was never sent because email is not configured' : 'failed to send'}.
+          Nothing has been lost — use <strong>Resend notification</strong> below once email is working.
+          {app.notification_error && (
+            <span className="block mt-1 text-xs opacity-80">Last error: {app.notification_error}</span>
+          )}
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Applicant Information</h2>
+          <AdminCard title="Applicant">
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="text-gray-500">Full Name</dt>
-                <dd className="font-medium text-gray-900">{app.full_name}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500">Email</dt>
-                <dd className="font-medium text-gray-900">
-                  <a href={`mailto:${app.email}`} className="flex items-center gap-1 hover:text-blue-600"><Mail className="w-3.5 h-3.5" /> {app.email}</a>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500">Phone</dt>
-                <dd className="font-medium text-gray-900">
-                  <a href={`tel:${app.phone}`} className="flex items-center gap-1 hover:text-blue-600"><Phone className="w-3.5 h-3.5" /> {app.phone}</a>
-                </dd>
-              </div>
-              {app.current_location && (
-                <div>
-                  <dt className="text-gray-500">Current Location</dt>
-                  <dd className="font-medium text-gray-900 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {app.current_location}</dd>
+              {applicantRows.map((row, index) => (
+                <div key={index} className={row.label === 'Address' ? 'sm:col-span-2' : undefined}>
+                  <dt className="text-gray-500 flex items-center gap-1.5">
+                    {row.icon}
+                    {row.label}
+                  </dt>
+                  <dd className="font-medium text-gray-900 mt-0.5 whitespace-pre-line">{row.value}</dd>
                 </div>
-              )}
-              {app.highest_qualification && (
-                <div>
-                  <dt className="text-gray-500">Highest Qualification</dt>
-                  <dd className="font-medium text-gray-900">{app.highest_qualification}</dd>
-                </div>
-              )}
-              {app.years_of_experience && (
-                <div>
-                  <dt className="text-gray-500">Years of Experience</dt>
-                  <dd className="font-medium text-gray-900">{app.years_of_experience}</dd>
-                </div>
-              )}
+              ))}
             </dl>
-          </div>
+          </AdminCard>
+
+          <AdminCard title="Position applied for">
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <dt className="text-gray-500">Position</dt>
+                <dd className="font-medium text-gray-900 mt-0.5">
+                  {app.job_id && app.job_slug ? (
+                    <Link href={`/careers/${app.job_slug}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {app.job_title_snapshot || app.job_slug}
+                    </Link>
+                  ) : (
+                    app.job_title_snapshot || 'General Application'
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-gray-500">Category</dt>
+                <dd className="font-medium text-gray-900 mt-0.5">{app.category_snapshot || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-500">Location</dt>
+                <dd className="font-medium text-gray-900 mt-0.5">{app.preferred_location || '—'}</dd>
+              </div>
+            </dl>
+            {!app.job_id && app.job_title_snapshot && app.job_title_snapshot !== 'General Application' && (
+              <p className="text-xs text-gray-500 mt-4 pt-4 border-t border-gray-100">
+                The original job posting has since been deleted. The position recorded above is the one this
+                candidate actually applied for.
+              </p>
+            )}
+          </AdminCard>
 
           {app.cover_letter && (
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Cover Letter</h2>
-              <p className="text-sm text-gray-700 whitespace-pre-line">{app.cover_letter}</p>
-            </div>
+            <AdminCard title="Cover note">
+              {/* React escapes this — pasted markup renders as text, not HTML. */}
+              <p className="text-sm text-gray-700 whitespace-pre-line break-words">{app.cover_letter}</p>
+            </AdminCard>
           )}
 
-          {(app.linkedin_url || app.portfolio_url) && (
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Links</h2>
-              <div className="space-y-2 text-sm">
-                {app.linkedin_url && (
-                  <a href={app.linkedin_url} target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:text-blue-700">{app.linkedin_url}</a>
-                )}
-                {app.portfolio_url && (
-                  <a href={app.portfolio_url} target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:text-blue-700">{app.portfolio_url}</a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {app.resume_url && (
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Resume</h2>
-              <button
-                type="button"
-                onClick={handleDownloadResume}
-                disabled={resumeLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-60"
-              >
-                <Download className="w-4 h-4" />
-                {resumeLoading ? 'Preparing…' : app.resume_filename || 'Download resume'}
-              </button>
-              {resumeError && <p className="mt-2 text-sm text-red-600">{resumeError}</p>}
-            </div>
-          )}
+          <AdminCard title="CV / Resume">
+            {app.resume_url ? (
+              <>
+                <button type="button" onClick={downloadCv} disabled={cvBusy} className={BTN_SECONDARY}>
+                  {cvBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {cvBusy ? 'Preparing…' : `Download ${app.resume_filename || 'CV'}`}
+                </button>
+                <p className="text-xs text-gray-500 mt-3">
+                  CVs are stored privately. This creates a link that expires after five minutes and is not
+                  publicly accessible.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">No CV on file for this application.</p>
+            )}
+          </AdminCard>
         </div>
 
+        {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Application Status</h2>
+          <AdminCard title="Application status">
+            <label htmlFor="app-status" className="sr-only">Application status</label>
             <select
+              id="app-status"
               value={app.status}
-              onChange={(e) => handleUpdate('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-gray-900 focus:outline-none"
+              disabled={saving}
+              onChange={(e) => update('status', e.target.value)}
+              className={INPUT}
             >
               {Object.entries(APPLICATION_STATUSES).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
             {saving && <p className="text-xs text-gray-400 mt-2">Saving…</p>}
-          </div>
+          </AdminCard>
 
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Internal Notes</h2>
+          <AdminCard title="Email notification">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-600">Status</span>
+              <StatusPill
+                kind="notification"
+                value={notificationStatus}
+                label={
+                  NOTIFICATION_STATUSES[notificationStatus as keyof typeof NOTIFICATION_STATUSES] ||
+                  notificationStatus
+                }
+              />
+            </div>
+            {app.notification_attempts > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                {app.notification_attempts} attempt{app.notification_attempts === 1 ? '' : 's'}
+                {app.notification_last_attempt_at && `, last ${formatDateTime(app.notification_last_attempt_at)}`}
+              </p>
+            )}
+            <button type="button" onClick={resend} disabled={mailBusy} className={`${BTN_SECONDARY} w-full mt-4`}>
+              {mailBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {mailBusy ? 'Sending…' : 'Resend notification'}
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              Resending only sends the email again — it never creates another application record.
+            </p>
+          </AdminCard>
+
+          <AdminCard title="Internal notes">
+            <label htmlFor="app-notes" className="sr-only">Internal notes</label>
             <textarea
-              value={app.internal_notes || ''}
-              onChange={(e) => setApp({ ...app, internal_notes: e.target.value })}
-              onBlur={(e) => handleUpdate('internal_notes', e.target.value)}
+              id="app-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => {
+                if (notes !== (app.internal_notes || '')) update('internal_notes', notes);
+              }}
               rows={5}
-              placeholder="Add internal notes…"
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-gray-900 focus:outline-none resize-y"
+              maxLength={5000}
+              placeholder="Interview notes, follow-up reminders…"
+              className={`${INPUT} resize-y`}
             />
-          </div>
+            <p className="text-xs text-gray-500 mt-1">Saved when you click away. Never shown to the applicant.</p>
+          </AdminCard>
 
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Meta</h2>
+          <AdminCard title="Record">
             <dl className="space-y-2 text-xs">
-              <div><dt className="text-gray-500 inline">Position: </dt><dd className="text-gray-900 inline">{app.job_slug || 'General Application'}</dd></div>
-              <div><dt className="text-gray-500 inline">Applied: </dt><dd className="text-gray-900 inline">{formatDate(app.created_at)}</dd></div>
-              <div><dt className="text-gray-500 inline">ID: </dt><dd className="text-gray-900 inline font-mono">{app.id}</dd></div>
+              <div>
+                <dt className="text-gray-500 inline">Applied: </dt>
+                <dd className="text-gray-900 inline">{formatDate(app.created_at)}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-500 inline">Last updated: </dt>
+                <dd className="text-gray-900 inline">{formatDateTime(app.updated_at)}</dd>
+              </div>
+              <div className="break-all">
+                <dt className="text-gray-500 inline">Application ID: </dt>
+                <dd className="text-gray-900 inline font-mono">{app.id}</dd>
+              </div>
             </dl>
-          </div>
+          </AdminCard>
 
-          <button onClick={() => setConfirmDelete(true)} className="w-full px-4 py-2 border border-red-300 text-red-600 text-sm rounded hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
-            <Trash2 className="w-4 h-4" /> Delete Application
+          <button type="button" onClick={() => setConfirmDelete(true)} className={`${BTN_DANGER_GHOST} w-full`}>
+            <Trash2 className="w-4 h-4" /> Delete application
           </button>
         </div>
       </div>
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDelete(false)} />
-          <div className="relative bg-white p-6 rounded-lg max-w-sm w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete this application?</h3>
-            <p className="text-sm text-gray-600 mb-4">This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Cancel</button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmDelete}
+        busy={deleteBusy}
+        title="Delete this application?"
+        message={`${app.full_name}'s application will be permanently removed.`}
+        consequence="Their CV is deleted from storage at the same time. This cannot be undone — consider setting the status to Rejected instead, which keeps the record."
+        confirmLabel="Delete permanently"
+        onConfirm={remove}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }
