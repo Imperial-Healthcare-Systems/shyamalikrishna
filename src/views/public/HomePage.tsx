@@ -11,6 +11,7 @@ import { useSEO } from '@/lib/seo';
 import { useCategories, usePartners, useProducts, useServices, useSiteSettings } from '@/lib/hooks';
 import { ProductCard } from '@/components/products/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
+import { PartnerLogo } from '@/components/ui/PartnerLogo';
 import { SectionHeading } from '@/components/ui/Section';
 import { telLink, whatsappLink } from '@/lib/utils';
 import { useLang } from '@/lib/i18n';
@@ -129,9 +130,9 @@ export function HomePage({ initialCategories, initialPartners, initialProducts, 
       <section className="relative bg-charcoal overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/category-harvesting-residue.webp"
-            alt="Tractor with mounted implement working in a Bihar field at golden hour"
-            className="w-full h-full object-cover opacity-50"
+            src="/homepage-hero-john-deere.webp"
+            alt="John Deere tractor drawing a mounted implement through a Bihar field at golden hour"
+            className="w-full h-full object-cover"
             fetchPriority="high"
             width={1672}
             height={941}
@@ -162,6 +163,21 @@ export function HomePage({ initialCategories, initialPartners, initialProducts, 
               </Link>
             </div>
           </div>
+        </div>
+
+        {/*
+          Real markup, not the badge baked into the hero artwork: `object-cover`
+          crops the image to whatever aspect the section happens to be, and the
+          artwork's own badge sits in the bottom tenth, so it is the first thing
+          to disappear on a wide viewport.
+        */}
+        <div className="pointer-events-none absolute bottom-6 right-6 hidden items-center gap-2 border border-gold-300/70 bg-field-800/85 px-5 py-2.5 backdrop-blur-sm md:flex">
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-ivory">
+            {t('Authorized Dealer of', 'अधिकृत डीलर')}
+          </span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300">
+            John Deere
+          </span>
         </div>
       </section>
 
@@ -292,11 +308,11 @@ export function HomePage({ initialCategories, initialPartners, initialProducts, 
                   href={`/partners/${partner.slug}`}
                   className="group flex flex-col items-center text-center p-6 bg-white border border-bone-300 hover:border-gold transition-all min-h-[160px]"
                 >
-                  <div className="w-14 h-14 bg-charcoal text-gold flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                    <span className="heading-serif text-xl font-bold">
-                      {partner.name.charAt(0)}
-                    </span>
-                  </div>
+                  <PartnerLogo
+                    partner={partner}
+                    className="w-20 h-20 mb-3 group-hover:scale-105 transition-transform"
+                    letterClassName="text-2xl"
+                  />
                   <span className="text-sm font-medium text-charcoal group-hover:text-gold transition-colors">
                     {partner.name}
                   </span>

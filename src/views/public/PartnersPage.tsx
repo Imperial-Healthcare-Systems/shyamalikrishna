@@ -9,6 +9,7 @@ import { PageHero } from '@/components/ui/Section';
 import { Reveal } from '@/components/ui/Reveal';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { LoadingSpinner } from '@/components/ui/States';
+import { PartnerLogo } from '@/components/ui/PartnerLogo';
 import { useLang } from '@/lib/i18n';
 
 interface PartnersPageProps {
@@ -60,11 +61,11 @@ export function PartnersPage({ initialPartners, initialProducts }: PartnersPageP
                     className="group block bg-white border border-bone-300 hover:border-gold transition-all p-6 lg:p-8"
                   >
                     <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-charcoal text-gold flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        <span className="heading-serif text-2xl lg:text-3xl font-bold">
-                          {partner.name.charAt(0)}
-                        </span>
-                      </div>
+                      <PartnerLogo
+                        partner={partner}
+                        className="w-24 h-24 lg:w-32 lg:h-32 group-hover:scale-105 transition-transform"
+                        letterClassName="text-3xl lg:text-4xl"
+                      />
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h2 className="heading-serif text-xl lg:text-2xl text-charcoal group-hover:text-gold transition-colors">
