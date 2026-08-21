@@ -1,5 +1,6 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getServiceClient, siteOrigin } from '@/lib/server/supabase-admin';
 import {
   hashPassword,
@@ -1818,6 +1819,38 @@ const publicRoutes = new Set([
   '/admin-api/password/recovery-status',
 ]);
 
+/**
+ * Public pages to rebuild after a successful admin write.
+ *
+ * Every public route sets `revalidate = 300`, which is what keeps the site
+ * quick, but on its own it also means an edit takes up to five minutes to
+ * surface — longer on a quiet site, because the first visit after the window
+ * elapses still serves the stale page and merely triggers the rebuild in the
+ * background. Rebuilding on the write instead makes the change immediate
+ * without giving up the cache for ordinary visitors.
+ *
+ * Paths containing a dynamic segment are passed as the route pattern, which
+ * revalidates every generated instance of that route rather than one URL.
+ */
+const REVALIDATE_ON_WRITE: Array<{ match: RegExp; paths: string[] }> = [
+  {
+    // Jobs, and the lookups the careers filters are built from.
+    match: /^\/admin-api\/(jobs|job-categories|job-locations|employment-types)\b/,
+    paths: ['/careers', '/careers/[jobSlug]', '/careers/[jobSlug]/apply'],
+  },
+];
+
+function revalidateFor(path: string): void {
+  for (const { match, paths } of REVALIDATE_ON_WRITE) {
+    if (!match.test(path)) continue;
+    for (const target of paths) {
+      // A bracket means a dynamic segment, which needs the explicit 'page'
+      // hint; a literal path does not.
+      revalidatePath(target, target.includes('[') ? 'page' : undefined);
+    }
+  }
+}
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   try {
     const { path: segments } = await ctx.params;
@@ -1844,7 +1877,13 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] 
     const authed = publicRoutes.has(path) || (await validateSession(token));
     if (!authed) return json({ error: 'Unauthorized' }, 401);
 
-    return await handler(req as unknown as Request, body, authed);
+    const response = await handler(req as unknown as Request, body, authed);
+
+    // Only on a write that actually succeeded — rebuilding after a rejected
+    // save would throw away a good cache entry for nothing.
+    if (req.method !== 'GET' && response.ok) revalidateFor(path);
+
+    return response;
   } catch (err: any) {
     // The message is deliberately not returned. It can carry the name of a
     // missing environment variable, a Postgres error with column names, or a
