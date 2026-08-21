@@ -75,10 +75,19 @@ export function JobApplyPage({ initialJob }: JobApplyPageProps = {}) {
       */}
       {!isGeneral && job?.image_url && (
         <div className="bg-charcoal">
+          {/*
+            Shown whole, never cropped. `object-cover` would be wrong here: a
+            recruitment poster carries its own text — salary, locations, phone
+            numbers — right to the edges, and cropping to a fixed height throws
+            exactly that away. Capped at the banner's native width so a wide
+            screen cannot upscale it into softness.
+          */}
           <img
             src={job.image_url}
             alt={job.title ? `${job.title} — Shyamali Krishna Automobile` : 'Job banner'}
-            className="w-full max-h-[22rem] object-cover"
+            className="block w-full h-auto mx-auto max-w-[1672px]"
+            width={1672}
+            height={941}
             fetchPriority="high"
           />
         </div>
