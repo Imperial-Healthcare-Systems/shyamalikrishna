@@ -9,6 +9,7 @@ import {
   generateResetToken,
   sha256,
 } from '@/lib/server/passwords';
+import { validateImage } from '@/lib/server/image-upload';
 import { notifyApplication, resolveRecoveryEmail } from '@/lib/server/careers-notify';
 import { sendMail, passwordResetEmail, configuredTransport } from '@/lib/server/mailer';
 import { slugify } from '@/lib/utils';
@@ -1238,6 +1239,56 @@ const routes: Record<string, (req: Request, body: any, authed: boolean) => Promi
     return json({ success: true });
   },
 
+  /**
+   * Banner upload for the job editor.
+   *
+   * Multipart rather than JSON, so `handle` leaves the body unread and the
+   * stream is still here to consume. Returns the public URL, which the editor
+   * puts in the draft and saves with the rest of the job — an upload on its
+   * own changes nothing until the job is saved.
+   */
+  "/admin-api/jobs/image": async (req) => {
+    let file: File | null = null;
+    try {
+      const form = await req.formData();
+      const entry = form.get("file");
+      file = entry instanceof File ? entry : null;
+    } catch {
+      return json({ error: "Could not read the uploaded file." }, 400);
+    }
+
+    if (!file) return json({ error: "Choose an image to upload." }, 400);
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const check = validateImage(file, bytes);
+    if (!check.ok) return json({ error: check.error }, 400);
+
+    const { error } = await supabase.storage
+      .from("job-images")
+      .upload(check.objectPath, check.bytes, {
+        contentType: check.contentType,
+        // Paths carry a UUID, so a collision means something is badly wrong
+        // and overwriting would hide it.
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("[admin-api] banner upload failed:", error.message);
+      return json(
+        {
+          error: /bucket/i.test(error.message)
+            ? "Image storage is not set up yet. Run supabase/migrations/0003_job_banner_image.sql."
+            : "Could not upload that image. Please try again.",
+        },
+        400
+      );
+    }
+
+    const { data } = supabase.storage.from("job-images").getPublicUrl(check.objectPath);
+    await logActivity("upload", "job", `Uploaded a job banner image`);
+    return json({ url: data.publicUrl });
+  },
+
   "/admin-api/jobs": async (req, _body) => {
     const url = new URL(req.url);
     const search = (url.searchParams.get("search") || "").trim();
@@ -1391,6 +1442,7 @@ const routes: Record<string, (req: Request, body: any, authed: boolean) => Promi
       salary_negotiable: Boolean(raw?.salary_negotiable),
       contact_info: emptyToNull(raw?.contact_info),
       additional_notes: emptyToNull(raw?.additional_notes),
+      image_url: emptyToNull(raw?.image_url),
       application_deadline: deadline,
       seo_title: emptyToNull(raw?.seo_title),
       seo_description: emptyToNull(raw?.seo_description),
