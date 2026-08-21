@@ -10,6 +10,7 @@ import {
 import { useSEO } from '@/lib/seo';
 import { useJob } from '@/lib/hooks';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { JobBanner } from '@/components/ui/JobBanner';
 import { LoadingSpinner, ErrorState } from '@/components/ui/States';
 import { Reveal } from '@/components/ui/Reveal';
 import { formatDate } from '@/lib/utils';
@@ -137,6 +138,8 @@ export function JobDetailPage({ initialJob }: JobDetailPageProps = {}) {
 
   return (
     <div>
+      <JobBanner job={job} />
+
       {/* Hero */}
       <section className="bg-charcoal text-ivory py-12 lg:py-16">
         <div className="container-site">

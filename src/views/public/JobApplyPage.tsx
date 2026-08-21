@@ -8,6 +8,7 @@ import { useSEO } from '@/lib/seo';
 import { useJob } from '@/lib/hooks';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { LoadingSpinner, ErrorState } from '@/components/ui/States';
+import { JobBanner } from '@/components/ui/JobBanner';
 import { JobApplicationForm } from '@/components/forms/JobApplicationForm';
 import { useLang } from '@/lib/i18n';
 import { isJobOpen } from '@/lib/types';
@@ -73,25 +74,7 @@ export function JobApplyPage({ initialJob }: JobApplyPageProps = {}) {
         art directed for text overlay, so anything laid on top risks landing on
         a face or a bright sky.
       */}
-      {!isGeneral && job?.image_url && (
-        <div className="bg-charcoal">
-          {/*
-            Shown whole, never cropped. `object-cover` would be wrong here: a
-            recruitment poster carries its own text — salary, locations, phone
-            numbers — right to the edges, and cropping to a fixed height throws
-            exactly that away. Capped at the banner's native width so a wide
-            screen cannot upscale it into softness.
-          */}
-          <img
-            src={job.image_url}
-            alt={job.title ? `${job.title} — Shyamali Krishna Automobile` : 'Job banner'}
-            className="block w-full h-auto mx-auto max-w-[1672px]"
-            width={1672}
-            height={941}
-            fetchPriority="high"
-          />
-        </div>
-      )}
+      {!isGeneral && <JobBanner job={job} />}
 
       <section className="bg-charcoal text-ivory py-12">
         <div className="container-site">
