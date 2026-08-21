@@ -19,11 +19,11 @@ next-env.d.ts
 /dist
 
 # environment
-# .env.local holds SUPABASE_SERVICE_ROLE_KEY and ADMIN_PASSWORD — never commit.
+# No .env file of any kind is committed — not even .env, which holds only
+# NEXT_PUBLIC_* values. Every deployment gets its configuration from the host's
+# environment settings, so a clone will not build until those are set. Copy
+# .env.example to .env.local to work locally.
 .env*
-# .env holds only NEXT_PUBLIC_* values, which ship in the client bundle anyway,
-# and is committed so the build needs no dashboard configuration.
-!.env
 !.env.example
 
 # testing
