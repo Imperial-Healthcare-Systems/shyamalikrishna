@@ -9,6 +9,7 @@ import { usePartner, usePartnerProducts, useSiteSettings } from '@/lib/hooks';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { ProductCard } from '@/components/products/ProductCard';
 import { LoadingSpinner, ErrorState } from '@/components/ui/States';
+import { PartnerLogo } from '@/components/ui/PartnerLogo';
 import { Reveal } from '@/components/ui/Reveal';
 import { telLink, whatsappLink } from '@/lib/utils';
 import { useLang } from '@/lib/i18n';
@@ -70,9 +71,12 @@ export function PartnerDetailPage({ initialPartner, initialProducts, initialSett
           ]} />
           <div className="max-w-3xl mt-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-gold text-charcoal flex items-center justify-center shrink-0">
-                <span className="heading-serif text-3xl font-bold">{partner.name.charAt(0)}</span>
-              </div>
+              <PartnerLogo
+                partner={partner}
+                className="w-24 h-24"
+                fallbackClassName="bg-gold text-charcoal"
+                letterClassName="text-4xl"
+              />
               <div>
                 <h1 className="heading-serif text-3xl md:text-4xl lg:text-5xl text-ivory">{partner.name}</h1>
                 {partner.origin_country && (
