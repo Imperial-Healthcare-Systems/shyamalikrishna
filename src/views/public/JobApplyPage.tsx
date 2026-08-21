@@ -67,6 +67,23 @@ export function JobApplyPage({ initialJob }: JobApplyPageProps = {}) {
 
   return (
     <div>
+      {/*
+        Banner uploaded with the job, when there is one. Sits above the heading
+        rather than behind it: these are photographs chosen by the admin, not
+        art directed for text overlay, so anything laid on top risks landing on
+        a face or a bright sky.
+      */}
+      {!isGeneral && job?.image_url && (
+        <div className="bg-charcoal">
+          <img
+            src={job.image_url}
+            alt={job.title ? `${job.title} — Shyamali Krishna Automobile` : 'Job banner'}
+            className="w-full max-h-[22rem] object-cover"
+            fetchPriority="high"
+          />
+        </div>
+      )}
+
       <section className="bg-charcoal text-ivory py-12">
         <div className="container-site">
           <Breadcrumbs

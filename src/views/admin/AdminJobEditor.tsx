@@ -48,9 +48,22 @@ interface JobDraft {
   application_deadline: string;
   contact_info: string;
   additional_notes: string;
+  image_url: string;
   seo_title: string;
   seo_description: string;
 }
+
+/**
+ * Kept in step with ALLOWED_EXTENSIONS in lib/server/image-upload.ts, which is
+ * where the real check happens. Not imported from there: that module pulls in
+ * node:crypto and must not reach the browser bundle.
+ */
+const IMAGE_ACCEPT = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
+const IMAGE_MAX_MB = 4;
+/** Mirrors BANNER_* in lib/server/image-upload.ts, which enforces them. */
+const BANNER_WIDTH = 1672;
+const BANNER_HEIGHT = 941;
+const BANNER_MIN_WIDTH = 1200;
 
 /** Sentinel value for the "Custom…" entry in the experience-level select. */
 const CUSTOM_OPTION = '__custom__';
@@ -62,7 +75,7 @@ const EMPTY: JobDraft = {
   responsibilities: '', requirements: '', skills: '',
   preferred_qualifications: '', what_we_offer: '',
   salary_type: '', salary_min: '', salary_max: '', salary_period: 'month', salary_negotiable: false,
-  application_deadline: '', contact_info: '', additional_notes: '',
+  application_deadline: '', contact_info: '', additional_notes: '', image_url: '',
   seo_title: '', seo_description: '',
 };
 
@@ -84,6 +97,7 @@ export function AdminJobEditor() {
   const [slugLocked, setSlugLocked] = useState(false);
   // The experience presets cover most roles; this switches the field to free text.
   const [customExperience, setCustomExperience] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -132,6 +146,7 @@ export function AdminJobEditor() {
           application_deadline: (j.application_deadline || '').slice(0, 10),
           contact_info: j.contact_info || '',
           additional_notes: j.additional_notes || '',
+          image_url: j.image_url || '',
           seo_title: j.seo_title || '',
           seo_description: j.seo_description || '',
         });
@@ -156,6 +171,42 @@ export function AdminJobEditor() {
 
   const set = <K extends keyof JobDraft>(key: K, value: JobDraft[K]) => {
     setJob((prev) => ({ ...prev, [key]: value }));
+  };
+
+  /**
+   * Uploads immediately on pick, then stores the returned URL in the draft.
+   * The job itself is not written until the admin saves, so choosing an image
+   * and navigating away leaves an orphaned object in the bucket rather than a
+   * half-saved job — the cheaper of the two failures.
+   *
+   * Not adminFetch: that helper always sends JSON, and this has to be
+   * multipart for the file to survive the trip.
+   */
+  const uploadImage = async (file: File) => {
+    if (!token) return;
+    setError(null);
+    setSuccess(null);
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const response = await fetch('/api/admin/jobs/image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data?.error || 'Could not upload that image.');
+        return;
+      }
+      set('image_url', data.url || '');
+      setSuccess('Image uploaded. Save the job to publish it.');
+    } catch {
+      setError('Could not upload that image. Please check your connection and try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const toggleLocation = (locationId: string) => {
@@ -541,6 +592,98 @@ export function AdminJobEditor() {
               className={`${INPUT} resize-y`}
             />
           </div>
+        </div>
+      </AdminCard>
+
+      {/* Banner image */}
+      <AdminCard title="Banner Image">
+        <div className="space-y-4">
+          <p className={HINT}>
+            Shown across the top of the application page, after someone clicks Apply Now.
+            Optional — leave it empty and the page keeps its plain heading.
+          </p>
+
+          <dl className="border border-gray-200 bg-gray-50 text-sm divide-y divide-gray-200">
+            <div className="flex justify-between gap-4 px-4 py-2">
+              <dt className="text-gray-600">Size</dt>
+              <dd className="font-medium text-gray-900">
+                {BANNER_WIDTH} × {BANNER_HEIGHT} px
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 px-4 py-2">
+              <dt className="text-gray-600">Shape</dt>
+              <dd className="font-medium text-gray-900">16:9 widescreen</dd>
+            </div>
+            <div className="flex justify-between gap-4 px-4 py-2">
+              <dt className="text-gray-600">Minimum width</dt>
+              <dd className="font-medium text-gray-900">{BANNER_MIN_WIDTH} px</dd>
+            </div>
+            <div className="flex justify-between gap-4 px-4 py-2">
+              <dt className="text-gray-600">File</dt>
+              <dd className="font-medium text-gray-900">JPG, PNG or WebP · max {IMAGE_MAX_MB} MB</dd>
+            </div>
+          </dl>
+
+          <p className={HINT}>
+            This is the same shape as the banner on the homepage. Anything squarer, taller or
+            smaller than the above is rejected — a portrait photo would have its middle cropped
+            out and its subject lost.
+          </p>
+
+          {job.image_url ? (
+            <div className="space-y-3">
+              <div className="border border-gray-200 bg-gray-50 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={job.image_url}
+                  alt="Job banner preview"
+                  className="w-full max-h-56 object-cover"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <label className={`${BTN_SECONDARY} cursor-pointer`}>
+                  {uploading ? 'Uploading…' : 'Replace image'}
+                  <input
+                    type="file"
+                    accept={IMAGE_ACCEPT}
+                    className="sr-only"
+                    disabled={busy || uploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      // Reset so picking the same file twice still fires onChange.
+                      e.target.value = '';
+                      if (file) uploadImage(file);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={BTN_SECONDARY}
+                  disabled={busy || uploading}
+                  onClick={() => set('image_url', '')}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label
+              className={`${BTN_SECONDARY} cursor-pointer inline-flex ${uploading ? 'opacity-60' : ''}`}
+            >
+              {uploading ? 'Uploading…' : 'Choose an image'}
+              <input
+                type="file"
+                accept={IMAGE_ACCEPT}
+                className="sr-only"
+                disabled={busy || uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) uploadImage(file);
+                }}
+              />
+            </label>
+          )}
         </div>
       </AdminCard>
 

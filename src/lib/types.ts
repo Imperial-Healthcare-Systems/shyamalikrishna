@@ -207,6 +207,8 @@ export interface Job {
   salary_negotiable: boolean;
   contact_info: string | null;
   additional_notes: string | null;
+  /** Banner shown at the top of the apply page. Public storage URL. */
+  image_url: string | null;
 
   // Populated by the join in lib/data.ts and lib/hooks.ts
   category?: JobCategory | null;
